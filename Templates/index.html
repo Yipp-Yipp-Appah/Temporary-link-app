@@ -1,22 +1,275 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Interview Link Generator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interview Link Generator</title>
+
+<style>
+/* ======================
+   GLOBAL LAYOUT
+====================== */
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b0f17;
+    color: #e6e6e6;
+    overflow: hidden;
+}
+
+/* Fractal Layer */
+#fractal-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Fractal particles */
+.fractal {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, #4de1ff, transparent);
+    opacity: 0.7;
+    animation: fadeOut 2.5s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { transform: scale(1); opacity: 0.8; }
+    to { transform: scale(4); opacity: 0; }
+}
+
+/* ======================
+   DASHBOARD LAYOUT
+====================== */
+
+.dashboard {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 220px;
+    background: #0f1624;
+    padding: 20px;
+    border-right: 1px solid #1d2a3a;
+}
+
+.sidebar h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #7aa2ff;
+    margin-bottom: 20px;
+}
+
+.nav-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #b8c7e0;
+}
+
+.nav-item:hover {
+    background: #162033;
+    color: white;
+}
+
+/* Main content */
+.main {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+/* Card */
+.card {
+    background: #121a2a;
+    border: 1px solid #1f2b40;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 600px;
+}
+
+/* Inputs */
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: 1px solid #2a3b55;
+    background: #0b0f17;
+    color: white;
+}
+
+button {
+    margin-top: 15px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #4de1ff;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2fd1ff;
+}
+
+/* Output card */
+.output {
+    margin-top: 20px;
+    padding: 15px;
+    background: #0b1220;
+    border: 1px solid #23324a;
+    border-radius: 8px;
+    word-break: break-all;
+}
+
+/* Small stats panel */
+.stats {
+    margin-top: 30px;
+    display: flex;
+    gap: 10px;
+}
+
+.stat {
+    flex: 1;
+    background: #121a2a;
+    border: 1px solid #1f2b40;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 13px;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Liam's Interveiw Temporary Link Generator</h1>
+<div id="fractal-layer"></div>
 
-<form action="/create" method="post">
-    <label>Microsoft Bookings URL</label><br><br>
+<div class="dashboard">
 
-    <input name="url" style="width:600px"
-           placeholder="Paste Bookings URL here">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Recruiting Tools</h2>
+        <div class="nav-item">Link Generator</div>
+        <div class="nav-item">Active Links</div>
+        <div class="nav-item">Expired Links</div>
+        <div class="nav-item">Analytics</div>
+<div class="sidebar">
+<h3>Recruiting SaaS</h3>
 
-    <br><br>
+<a href="/logout" style="color:#4de1ff;">Logout</a>
+</div>
+    </div>
 
-    <button type="submit">Create Candidate Link</button>
-</form>
+    <!-- Main -->
+    <div class="main">
 
+        <h1>Interview Link Generator</h1>
+        <p style="color:#8aa0c7;">Generate secure, expiring scheduling links for candidates</p>
+
+        <div class="card">
+
+            <form method="POST" action="/create">
+                <label>Booking URL</label>
+                <input id="urlInput" name="url" placeholder="Paste Microsoft Bookings / Calendly link..." />
+                <button type="submit">Generate Link</button>
+            </form>
+
+            {% if link %}
+            <div class="output">
+                <strong>Generated Link:</strong><br/>
+                <a href="{{ link }}" style="color:#4de1ff;">{{ link }}</a>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <div class="stats">
+    <div class="stat">
+        <strong>Active Links</strong><br/>
+        <span id="active">0</span>
+    </div>
+
+    <div class="stat">
+        <strong>Clicked Links</strong><br/>
+        <span id="clicked">0</span>
+    </div>
+
+    <div class="stat">
+        <strong>Total Links</strong><br/>
+        <span id="total">0</span>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<script>
+const input = document.getElementById("urlInput");
+const layer = document.getElementById("fractal-layer");
+
+let intensity = 0;
+
+function spawnFractal() {
+    const f = document.createElement("div");
+    f.className = "fractal";
+
+    const x = Math.random() * window.innerWidth;
+    const y = Math.random() * window.innerHeight;
+
+    f.style.left = x + "px";
+    f.style.top = y + "px";
+
+    const size = 10 + Math.random() * 80;
+    f.style.width = size + "px";
+    f.style.height = size + "px";
+
+    layer.appendChild(f);
+
+    setTimeout(() => f.remove(), 2500);
+}
+
+input.addEventListener("input", () => {
+    intensity++;
+
+    const count = Math.min(intensity, 10);
+
+    for (let i = 0; i < count; i++) {
+        spawnFractal();
+    }
+
+    clearTimeout(window.decay);
+    window.decay = setTimeout(() => intensity = 0, 400);
+});
+</script>
+<script>
+async function loadStats() {
+    try {
+        const res = await fetch("/api/stats");
+        const data = await res.json();
+
+        document.getElementById("active").innerText = data.active_links;
+        document.getElementById("clicked").innerText = data.clicked_links;
+        document.getElementById("total").innerText = data.total_links;
+
+    } catch (e) {
+        console.log("Stats load failed", e);
+    }
+}
+
+loadStats();
+setInterval(loadStats, 5000);
+</script>
 </body>
 </html>
