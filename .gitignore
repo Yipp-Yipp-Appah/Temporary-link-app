@@ -3,3 +3,4 @@ __pycache__/
 links.json
 .env
 .vscode/
+links.db
