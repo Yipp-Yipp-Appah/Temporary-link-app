@@ -59,7 +59,7 @@ def create_initial_admin():
     c.execute("SELECT COUNT(*) FROM users")
     count = c.fetchone()[0]
 
-   if count == 0:
+    if count == 0:
     print("Creating initial admin:", email)
 
     c.execute(
