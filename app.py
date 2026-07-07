@@ -79,6 +79,44 @@ def create_initial_admin():
 
     conn.close()
 
+from werkzeug.security import generate_password_hash
+import os
+
+@app.route("/setup-admin")
+def setup_admin():
+    conn = db()
+    c = conn.cursor()
+
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+
+    if count > 0:
+        conn.close()
+        return "Setup already completed."
+
+    email = os.environ.get("ADMIN_EMAIL")
+    password = os.environ.get("ADMIN_PASSWORD")
+
+    if not email or not password:
+        conn.close()
+        return "ADMIN_EMAIL or ADMIN_PASSWORD is not configured.", 500
+
+    c.execute(
+        """
+        INSERT INTO users (email, password, role)
+        VALUES (?, ?, ?)
+        """,
+        (
+            email,
+            generate_password_hash(password),
+            "superadmin",
+        ),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return "Super admin created successfully."
 
 init_db()
 create_initial_admin()
