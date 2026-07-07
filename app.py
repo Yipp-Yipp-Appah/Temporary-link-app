@@ -14,15 +14,15 @@ app.secret_key = os.environ.get(
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+
 def db():
-    return psycopg.connect(DATABASE_URL)
+    return psycopg.connect(
+        DATABASE_URL,
+        sslmode="require"
+    )
 
 
 # ---------------- DATABASE ----------------
-
-def db():
-    return sqlite3.connect(DB_FILE)
-
 
 def init_db():
     conn = db()
