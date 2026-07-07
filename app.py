@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 app.secret_key = os.environ.get("SECRET_KEY", "temporary-development-key")
 
-DB_FILE = "links.db"
+DB_FILE = "/var/data/links.db"
 
 
 # ---------------- DATABASE ----------------
