@@ -56,18 +56,18 @@ def create_initial_admin():
     conn = db()
     c = conn.cursor()
 
-    c.execute("SELECT COUNT(*) FROM users")
+    c.execute("SELECT COUNT(*) FROM users WHERE role='superadmin'")
     count = c.fetchone()[0]
 
     if count == 0:
-    print("Creating initial admin:", email)
+        print("Creating initial admin:", email)
 
-    c.execute(
-        """
-        INSERT INTO users
-        (email, password, role)
-        VALUES (?, ?, ?)
-        """,
+        c.execute(
+            """
+            INSERT INTO users
+            (email, password, role)
+            VALUES (?, ?, ?)
+            """,
             (
                 email,
                 generate_password_hash(password),
@@ -79,20 +79,17 @@ def create_initial_admin():
 
     conn.close()
 
-from werkzeug.security import generate_password_hash
-import os
-
 @app.route("/setup-admin")
 def setup_admin():
     conn = db()
     c = conn.cursor()
 
-    c.execute("SELECT COUNT(*) FROM users")
+    c.execute("SELECT COUNT(*) FROM users WHERE role='superadmin'")
     count = c.fetchone()[0]
 
     if count > 0:
         conn.close()
-        return "Setup already completed."
+        return "Super admin already exists."
 
     email = os.environ.get("ADMIN_EMAIL")
     password = os.environ.get("ADMIN_PASSWORD")
@@ -103,14 +100,15 @@ def setup_admin():
 
     c.execute(
         """
-        INSERT INTO users (email, password, role)
+        INSERT INTO users
+        (email, password, role)
         VALUES (?, ?, ?)
         """,
         (
             email,
             generate_password_hash(password),
-            "superadmin",
-        ),
+            "superadmin"
+        )
     )
 
     conn.commit()
