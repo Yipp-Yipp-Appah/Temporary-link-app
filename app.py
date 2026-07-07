@@ -1,5 +1,5 @@
 from flask import Flask, request, redirect, render_template, jsonify, session
-import sqlite3
+import psycopg
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -7,9 +7,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-app.secret_key = os.environ.get("SECRET_KEY", "temporary-development-key")
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "temporary-development-key"
+)
 
-DB_FILE = "/var/data/links.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+def db():
+    return psycopg.connect(DATABASE_URL)
 
 
 # ---------------- DATABASE ----------------
@@ -24,7 +30,7 @@ def init_db():
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         role TEXT DEFAULT 'recruiter'
@@ -66,7 +72,7 @@ def create_initial_admin():
             """
             INSERT INTO users
             (email, password, role)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
             """,
             (
                 email,
@@ -102,7 +108,7 @@ def setup_admin():
         """
         INSERT INTO users
         (email, password, role)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
         """,
         (
             email,
@@ -132,7 +138,7 @@ def current_user():
     c = conn.cursor()
 
     c.execute(
-        "SELECT id,email,role FROM users WHERE id=?",
+        "SELECT id,email,role FROM users WHERE id=%s",
         (uid,)
     )
 
@@ -155,7 +161,7 @@ def login():
         c = conn.cursor()
 
         c.execute(
-            "SELECT id,password FROM users WHERE email=?",
+            "SELECT id,password FROM users WHERE email=%s",
             (email,)
         )
 
@@ -239,7 +245,7 @@ def create():
         created_at,
         user_id
         )
-        VALUES (?,?,?,?,?,?)
+        VALUES (%s,%s,%s,%s,%s,%s)
         """,
         (
             token,
@@ -277,7 +283,7 @@ def visit(token):
         """
         SELECT url,first_click,clicks
         FROM links
-        WHERE token=?
+        WHERE token=%s
         """,
         (token,)
     )
@@ -305,8 +311,8 @@ def visit(token):
     c.execute(
         """
         UPDATE links
-        SET first_click=?, clicks=?
-        WHERE token=?
+        SET first_click=%s, clicks=%s
+        WHERE token=%s
         """,
         (
             first_click,
@@ -350,7 +356,7 @@ def stats():
         """
         SELECT COUNT(*)
         FROM links
-        WHERE user_id=?
+        WHERE user_id=%s
         """,
         (user[0],)
     )
@@ -362,7 +368,7 @@ def stats():
         """
         SELECT SUM(clicks)
         FROM links
-        WHERE user_id=?
+        WHERE user_id=%s
         """,
         (user[0],)
     )
