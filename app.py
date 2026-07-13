@@ -221,15 +221,14 @@ def create():
     if not user:
         return redirect("/login")
 
-
-    url = request.form.get("url","").strip()
+    url = request.form.get("url", "").strip()
 
     if not url:
-        return "Missing URL",400
-
+        return "Missing URL", 400
 
     token = secrets.token_urlsafe(6)
 
+    print("Creating token:", token)
 
     conn = db()
     c = conn.cursor()
@@ -238,14 +237,15 @@ def create():
         """
         INSERT INTO links
         (
-        token,
-        url,
-        first_click,
-        clicks,
-        created_at,
-        user_id
+            token,
+            url,
+            first_click,
+            clicks,
+            created_at,
+            user_id
         )
         VALUES (%s,%s,%s,%s,%s,%s)
+        RETURNING token
         """,
         (
             token,
@@ -257,61 +257,61 @@ def create():
         )
     )
 
+    inserted = c.fetchone()
+
+    print("Inserted:", inserted)
+
     conn.commit()
     conn.close()
 
-
     full_link = request.host_url + token
+
+    print("Generated URL:", full_link)
 
     return render_template(
         "result.html",
         link=full_link
     )
 
-
-
 # ---------------- VISIT LINK ----------------
 
 @app.route("/<token>")
 def visit(token):
 
+    print("Looking for:", token)
+
     conn = db()
     c = conn.cursor()
 
-
     c.execute(
         """
-        SELECT url,first_click,clicks
+        SELECT token,url,first_click,clicks
         FROM links
         WHERE token=%s
         """,
         (token,)
     )
 
-
     row = c.fetchone()
 
+    print("Database returned:", row)
 
-    if not row:
+    if row is None:
         conn.close()
-        return "Invalid link",404
+        return "Invalid link", 404
 
-
-    url,first_click,clicks=row
-
+    token, url, first_click, clicks = row
 
     if first_click is None:
-
-        first_click=datetime.utcnow().isoformat()
-
+        first_click = datetime.utcnow().isoformat()
 
     clicks += 1
-
 
     c.execute(
         """
         UPDATE links
-        SET first_click=%s, clicks=%s
+        SET first_click=%s,
+            clicks=%s
         WHERE token=%s
         """,
         (
@@ -321,21 +321,15 @@ def visit(token):
         )
     )
 
-
     conn.commit()
     conn.close()
 
-
-    first=datetime.fromisoformat(first_click)
-
+    first = datetime.fromisoformat(first_click)
 
     if datetime.utcnow() > first + timedelta(days=14):
         return "<h2>Interview Link Expired</h2>"
 
-
     return redirect(url)
-
-
 
 # ---------------- ANALYTICS ----------------
 
